@@ -18,18 +18,20 @@ Usage() {
     echo "    -c: Clean Build test(Default is disable)"
     echo "    -u: Using DomU(Default is disable)"
     echo "    -v: Enable Virtio backend on DomD(Default is disabled)"
+    echo "    -r: Enable rm_work on Yocto build"
     echo "    -h: Show this usage"
 }
 
 # Proc arguments
 OPTIND=1
-while getopts "acghuv" OPT
+while getopts "acghuvr" OPT
 do
     case $OPT in
         a) USING_DOMA=yes; ENABLE_VIRTIO=yes ;;
         c) CLEAN_BUILD_TEST=yes;;
         u) USING_DOMU=yes;;
         v) ENABLE_VIRTIO=yes;;
+        r) INHERIT_RM_WORK=yes;;
         h) Usage; exit;;
         *) echo -e "\e[31mERROR: Unsupported option\e[m"; Usage; exit;;
     esac
@@ -63,6 +65,11 @@ moulin prod-devel-rcar4_new.yaml \
     --USE_GRAPHICS_PACKAGE ${USE_GRAPHICS_PACKAGE} \
     --ENABLE_VIRTIO ${ENABLE_VIRTIO} \
     --ADD_META_TEST yes \
+
+if [[ "${INHERIT_RM_WORK}" == "yes" ]]; then
+    echo "apply rm_work"
+    ../scripts/inherit_rm_work.sh
+fi
 
 ninja
 if [[ "${USING_DOMA}" == "yes" ]]; then
