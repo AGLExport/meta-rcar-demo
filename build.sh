@@ -56,6 +56,28 @@ if [[ ${USING_DOMA} == "yes" ]]; then
     export PATH=$PWD:$PATH
 fi
 
+
+#
+# sstate reuse can skip regenerating artifacts in the deploy phase, such as the "Image" symlink, breaking downstream builds.
+# This checks artifact consistency and forces regeneration when needed, by explicitly running do_clean and do_deploy.
+#
+
+domd_regenerate_tasks=(virtual/kernel xen-tools u-boot ipl-burning)
+domu_regenerate_tasks=(virtual/kernel)
+
+if [ -d yocto/build-domd/conf ] && [ -d "yocto/build-domd/tmp/deploy/images/sparrow-hawk" ] && [ ! -e "yocto/build-domd/tmp/deploy/images/sparrow-hawk/Image" ]; then
+    cd yocto
+    bash -c "source poky/oe-init-build-env build-domd; bitbake -c clean ${domd_regenerate_tasks[*]}; bitbake -c deploy ${domd_regenerate_tasks[*]}"
+    cd "${WORK_DIR}"
+fi
+
+if [ -d yocto/build-domu/conf ] && [ -d "yocto/build-domu/tmp/deploy/images/virtio-armv8-xt" ] && [ ! -e "yocto/build-domu/tmp/deploy/images/virtio-armv8-xt/Image" ]; then
+    cd yocto
+    bash -c "source poky/oe-init-build-env build-domu; bitbake -c clean ${domu_regenerate_tasks[*]}; bitbake -c deploy ${domu_regenerate_tasks[*]}"
+    cd "${WORK_DIR}"
+fi
+
+
 rm -rf yocto/build-dom*/conf
 moulin prod-devel-rcar4_new.yaml \
     --MACHINE sparrow-hawk \
