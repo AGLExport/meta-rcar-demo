@@ -24,6 +24,15 @@ variables:
   ANDROID_KERNEL_DEPLOY_DIR: "out/deploy/common-modules/xen-virtual-device/xen_virtual_device_aarch64"
   ANDROID_DEVICE: "xenvm_trout_arm64"
   ANDROID_LUNCH_TARGET: "aosp_xenvm_trout_arm64-trunk_staging-userdebug"
+  AGL_GUEST_MACHINE: "virtio-aarch64"
+  AGL_GUEST_IMAGE_IVI: "agl-ivi-demo-flutter-guest"
+  AGL_GUEST_IMAGE_IC: "agl-cluster-demo-flutter-guest"
+  XT_DOMAGL_IVI_TAG: ""
+  XT_DOMAGL_IC_TAG: ""
+  XT_AUTOSTART_DOMA: "disable"
+  XT_AUTOSTART_DOMU: "disable"
+  XT_AUTOSTART_DOMAGL_IVI: "enable"
+  XT_AUTOSTART_DOMAGL_IC: "enable"
 
 common_data:
   # Sources used by all yocto-based domains
@@ -108,7 +117,11 @@ components:
         - [XT_DOMD_CONFIG_NAME, "%{XT_DOMD_CONFIG_NAME}"]
         - [XT_DOMU_CONFIG_NAME, "%{XT_DOMU_CONFIG_NAME}"]
         - [XT_DOMD_DTB_NAME, "%{XT_DOMD_DTB_NAME}"]
-        - [XT_GUEST_INSTALL, "%{XT_GENERIC_DOMU_TAG} %{XT_DOMA_TAG} domd"]
+        - [XT_GUEST_INSTALL, "%{XT_GENERIC_DOMU_TAG} %{XT_DOMA_TAG} %{XT_DOMAGL_IVI_TAG} %{XT_DOMAGL_IC_TAG} domd"]
+        - [XT_AUTOSTART_DOMA, "%{XT_AUTOSTART_DOMA}"]
+        - [XT_AUTOSTART_DOMU, "%{XT_AUTOSTART_DOMU}"]
+        - [XT_AUTOSTART_DOMAGL_IVI, "%{XT_AUTOSTART_DOMAGL_IVI}"]
+        - [XT_AUTOSTART_DOMAGL_IC, "%{XT_AUTOSTART_DOMAGL_IC}"]
 
         # Disable HWDB which quite huge (around 15MB) and is not required at all
         - [BAD_RECOMMENDATIONS:append, " udev-hwdb"]
@@ -153,7 +166,7 @@ components:
         - *DOMD_DOMU_CONF
         - [XT_DOM_NAME, "domd"]
         - [XT_DEVICE_TREES, "%{XT_DOMD_DTB_NAME} %{XT_XEN_DTB_NAME} %{XT_DOMA_DTB_NAME}"]
-        - [XT_GUEST_INSTALL, "%{XT_GENERIC_DOMU_TAG} %{XT_DOMA_TAG}"]
+        - [XT_GUEST_INSTALL, "%{XT_GENERIC_DOMU_TAG} %{XT_DOMA_TAG} %{XT_DOMAGL_IVI_TAG} %{XT_DOMAGL_IC_TAG}"]
         - [IMAGE_INSTALL:append, " iperf3"]
         - [IMAGE_INSTALL:append, " smcroute"]
         - [IMAGE_INSTALL:append, " snort"]
@@ -683,4 +696,50 @@ parameters:
             partitions:
               android:
                 *ANDROID_IMAGE
+
+  ENABLE_DOMU_AGL_IVI:
+    desc: "Install DomU AGL-IVI Guest"
+    "no":
+      default: true
+    "yes":
+      overrides:
+        variables:
+          XT_DOMAGL_IVI_TAG: "domagl-ivi"
+        components:
+          dom0:
+            builder:
+              additional_deps:
+                - "%{DOMU_BUILD_DIR}/tmp/deploy/images/%{DOMU_MACHINE}/Image"
+              external_src:
+                domagl-ivi: "%{YOCTOS_WORK_DIR}/%{DOMU_BUILD_DIR}/tmp/deploy/images/%{DOMU_MACHINE}/"
+        images:
+          full:
+            partitions:
+              domu-agl-ivi-rootfs:
+                type: raw_image
+                gpt_type: 0FC63DAF-8483-4772-8E79-3D69D8477DE4 # Linux filesystem data
+                image_path: "%{YOCTOS_WORK_DIR}/../../../../agl/build/tmp/deploy/images/%{AGL_GUEST_MACHINE}/%{AGL_GUEST_IMAGE_IVI}-%{AGL_GUEST_MACHINE}.rootfs.ext4"
+
+  ENABLE_DOMU_AGL_IC:
+    desc: "Install DomU AGL-Cluster Guest"
+    "no":
+      default: true
+    "yes":
+      overrides:
+        variables:
+          XT_DOMAGL_IC_TAG: "domagl-ic"
+        components:
+          dom0:
+            builder:
+              additional_deps:
+                - "%{DOMU_BUILD_DIR}/tmp/deploy/images/%{DOMU_MACHINE}/Image"
+              external_src:
+                domagl-ic: "%{YOCTOS_WORK_DIR}/%{DOMU_BUILD_DIR}/tmp/deploy/images/%{DOMU_MACHINE}/"
+        images:
+          full:
+            partitions:
+              domu-agl-ic-rootfs:
+                type: raw_image
+                gpt_type: 0FC63DAF-8483-4772-8E79-3D69D8477DE4 # Linux filesystem data
+                image_path: "%{YOCTOS_WORK_DIR}/../../../../agl/build/tmp/deploy/images/%{AGL_GUEST_MACHINE}/%{AGL_GUEST_IMAGE_IC}-%{AGL_GUEST_MACHINE}.rootfs.ext4"
 

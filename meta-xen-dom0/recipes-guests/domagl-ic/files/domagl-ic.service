@@ -1,0 +1,13 @@
+[Unit]
+Description=DomAGL-IC
+Requires=backend-ready@bridge.service
+After=backend-ready@bridge.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/xl create /etc/xen/domagl-ic.cfg
+ExecStop=/usr/sbin/xl destroy DomAGL-IC
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

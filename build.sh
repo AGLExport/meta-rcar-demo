@@ -87,6 +87,8 @@ moulin prod-devel-rcar4_new.yaml \
     --USE_GRAPHICS_PACKAGE ${USE_GRAPHICS_PACKAGE} \
     --ENABLE_VIRTIO ${ENABLE_VIRTIO} \
     --ADD_META_TEST yes \
+    --ENABLE_DOMU_AGL_IVI yes \
+    --ENABLE_DOMU_AGL_IC yes \
 
 if [[ "${INHERIT_RM_WORK}" == "yes" ]]; then
     echo "apply rm_work"

@@ -9,6 +9,8 @@ FILES:${PN}:append = " \
      ${libdir}/xen/bin/doma-set-root \
 "
 
+SYSTEMD_AUTO_ENABLE:${PN} = "${XT_AUTOSTART_DOMA}"
+
 do_install:append() {
     # Install domu-set-root script
     install -d ${D}${libdir}/xen/bin
