@@ -94,9 +94,10 @@ if [[ "${INHERIT_RM_WORK}" == "yes" ]]; then
 fi
 
 ninja
-if [[ "${USING_DOMA}" == "yes" ]]; then
-    ninja full.img.gz android_only.img.gz
-else
-    ninja full.img.gz
-fi
+ninja full.img
+# if [[ "${USING_DOMA}" == "yes" ]]; then
+#     ninja full.img.gz android_only.img.gz
+# else
+#     ninja full.img.gz
+# fi
 
