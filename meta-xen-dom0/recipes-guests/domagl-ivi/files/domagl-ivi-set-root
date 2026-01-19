@@ -47,6 +47,12 @@ if echo "${BOOT_STORAGE}" | grep -q -e 'mmc' -e 'nvme'; then
 fi
 STORAGE_PART="${BOOT_STORAGE}${PART_PREFIX}"
 
+# If we don't have sleep here, DomA and DomAGL-IVI boots simultaneously and results out-of-memory for some reasons.
+# TODO:
+# - check existance of DomA correctly
+# - wait for some proper event instead of sleep
+sleep 5s
+
 # now make up the configuration
 echo "Mangling domain configuration: setting storage to ${BOOT_STORAGE}"
 sed -i "s/STORAGE_PART/${STORAGE_PART}/g" $DOMU_CFG_FILE
