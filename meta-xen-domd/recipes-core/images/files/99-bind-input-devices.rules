@@ -1,0 +1,9 @@
+# NOTE: This is a sample configuration intended for a specific environment only.
+# Please adjust these settings to match your own setup.
+
+# event0: ILI210x Touchscreen -> DSI-1
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="ILI210x Touchscreen", ENV{WL_OUTPUT}="DSI-1"
+
+# event1: ILITEK ILITEK-TP -> DP-1
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="ILITEK ILITEK-TP", ENV{WL_OUTPUT}="DP-1"
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="ILITEK ILITEK-TP Mouse", ENV{WL_OUTPUT}="DP-1"

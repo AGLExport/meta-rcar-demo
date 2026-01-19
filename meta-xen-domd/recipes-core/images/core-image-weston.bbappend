@@ -33,3 +33,11 @@ IMAGE_INSTALL:append = " \
     ${@bb.utils.contains('XT_GUEST_INSTALL', 'doma', ' android-tools install-files-doma', '', d)} \
 "
 
+BBAPPEND_DIR := "${THISDIR}"
+
+ROOTFS_POSTPROCESS_COMMAND += "install_udev_rules;"
+install_udev_rules() {
+    mkdir -p ${IMAGE_ROOTFS}/etc/udev/rules.d
+    install -m 0755 ${BBAPPEND_DIR}/files/99-bind-input-devices.rules ${IMAGE_ROOTFS}/etc/udev/rules.d/
+}
+
