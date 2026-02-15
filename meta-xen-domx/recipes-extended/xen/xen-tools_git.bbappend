@@ -2,6 +2,10 @@ require xen-source.inc
 
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
+SRC_URI:append = " \
+    file://0001-Add-qemu_envs-guest-config-for-custom-environment-va.patch \
+"
+
 FILES:${PN}-test = "\
     ${libdir}/xen/bin/test-xenstore \
     ${libdir}/xen/bin/test-resource \

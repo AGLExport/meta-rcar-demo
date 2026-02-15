@@ -1,0 +1,183 @@
+From c07981598381890b13a60c7d559bd6c93da27e32 Mon Sep 17 00:00:00 2001
+From: Hiroyuki Ishii <ishii.hiroyuki002@jp.panasonic.com>
+Date: Sun, 15 Feb 2026 17:16:49 +0900
+Subject: [PATCH] Add qemu_envs guest config for custom environment variables
+
+This commit introduces the qemu_envs configuration,
+allowing users to pass arbitrary environment variables
+to the QEMU backend. This enhances flexibility for
+customizing guest environments during virtualization.
+
+Signed-off-by: Hiroyuki Ishii <ishii.hiroyuki002@jp.panasonic.com>
+---
+ tools/libs/light/libxl_dm.c      | 85 +++++++++++++++++++++++++++++++-
+ tools/libs/light/libxl_types.idl |  2 +
+ tools/xl/xl_parse.c              |  7 +++
+ 3 files changed, 93 insertions(+), 1 deletion(-)
+
+diff --git a/tools/libs/light/libxl_dm.c b/tools/libs/light/libxl_dm.c
+index fc92e16a5d..d9986c46a7 100644
+--- a/tools/libs/light/libxl_dm.c
++++ b/tools/libs/light/libxl_dm.c
+@@ -706,6 +706,24 @@ static int libxl__build_device_model_args_old(libxl__gc *gc,
+ 
+     libxl__set_qemu_env_for_xsa_180(gc, dm_envs);
+ 
++    /* Append user-specified QEMU environment variables */
++    if (b_info->qemu_envs) {
++        for (i = 0; b_info->qemu_envs && b_info->qemu_envs[i] != NULL; i++) {
++            char *eq = strchr(b_info->qemu_envs[i], '=');
++            if (eq) {
++                /* Split into key and value */
++                size_t keylen = eq - b_info->qemu_envs[i];
++                char key[keylen + 1];
++                strncpy(key, b_info->qemu_envs[i], keylen);
++                key[keylen] = '\0';
++                flexarray_append_pair(dm_envs, key, eq + 1);
++            } else {
++                /* If no '=', treat as key with empty value */
++                flexarray_append_pair(dm_envs, b_info->qemu_envs[i], "");
++            }
++        }
++    }
++
+     flexarray_vappend(dm_args, dm,
+                       "-d", GCSPRINTF("%d", domid), NULL);
+ 
+@@ -1211,6 +1229,24 @@ static int libxl__build_device_model_args_new(libxl__gc *gc,
+ 
+     libxl__set_qemu_env_for_xsa_180(gc, dm_envs);
+ 
++    /* Append user-specified QEMU environment variables */
++    if (b_info->qemu_envs) {
++        for (i = 0; b_info->qemu_envs && b_info->qemu_envs[i] != NULL; i++) {
++            char *eq = strchr(b_info->qemu_envs[i], '=');
++            if (eq) {
++                /* Split into key and value */
++                size_t keylen = eq - b_info->qemu_envs[i];
++                char key[keylen + 1];
++                strncpy(key, b_info->qemu_envs[i], keylen);
++                key[keylen] = '\0';
++                flexarray_append_pair(dm_envs, key, eq + 1);
++            } else {
++                /* If no '=', treat as key with empty value */
++                flexarray_append_pair(dm_envs, b_info->qemu_envs[i], "");
++            }
++        }
++    }
++
+     flexarray_vappend(dm_args, dm,
+                       "-xen-domid",
+                       GCSPRINTF("%d", guest_domid), NULL);
+@@ -3453,6 +3489,37 @@ static int libxl__get_qdisk_backend_dm_args(libxl__gc *gc,
+     return 0;
+ }
+ 
++static int libxl__get_qdisk_backend_dm_envs(libxl__gc *gc,
++                                            uint32_t domid,
++                                            uint32_t backend_domid,
++                                            flexarray_t *dm_envs)
++{
++    const char *dm_path, *tmp = NULL;
++    int rc, i = 0;
++
++    dm_path = DEVICE_MODEL_XS_PATH(gc, backend_domid, domid, "");
++
++    do {
++        const char *env_path = GCSPRINTF("%s/dm_envs/%d", dm_path, i);
++        tmp = NULL;
++        rc = libxl__xs_read_checked(gc, XBT_NULL, env_path, &tmp);
++        if (rc) return rc;
++        if (tmp) {
++            const char *eq = strchr(tmp, '=');
++            if (eq) {
++                size_t keylen = eq - tmp;
++                char *key = libxl__strndup(gc, tmp, keylen);
++                const char *val = eq + 1;
++                flexarray_append_pair(dm_envs, (void *)key, (void *)val);
++            } else {
++                flexarray_append_pair(dm_envs, (void *)tmp, (void *)"");
++            }
++        }
++        i++;
++    } while (tmp);
++    return 0;
++}
++
+ int libxl__save_dm_virtio_pci_host(libxl__gc *gc,
+                                    uint32_t domid,
+                                    libxl_virtio_pci_host *host)
+@@ -3566,6 +3633,17 @@ int libxl__save_qdisk_backend_dm_args(libxl__gc *gc,
+             if (rc) goto out;
+         }
+ 
++        /* save qemu_envs to xenstore */
++        if (guest_info->qemu_envs) {
++            int j;
++            for (j = 0; guest_info->qemu_envs[j] != NULL; j++) {
++                rc = libxl__xs_write_checked(gc, t,
++                    GCSPRINTF("%s/dm_envs/%d", dm_path, j),
++                    GCSPRINTF("%s", guest_info->qemu_envs[j]));
++                if (rc) goto out;
++            }
++        }
++
+         rc = libxl__xs_transaction_commit(gc, &t);
+         if (!rc) break;
+         if (rc < 0) goto out;
+@@ -3609,7 +3687,7 @@ void libxl__spawn_qdisk_backend(libxl__egc *egc, libxl__dm_spawn_state *dmss)
+     dm = qemu_xen_path(gc);
+ 
+     dm_args = flexarray_make(gc, 15, 1);
+-    dm_envs = flexarray_make(gc, 1, 1);
++    dm_envs = flexarray_make(gc, 15, 1);
+ 
+     flexarray_vappend(dm_args, dm, "-xen-domid",
+                       GCSPRINTF("%d", domid), NULL);
+@@ -3629,7 +3707,12 @@ void libxl__spawn_qdisk_backend(libxl__egc *egc, libxl__dm_spawn_state *dmss)
+     flexarray_append(dm_args, NULL);
+     args = (char **) flexarray_contents(dm_args);
+ 
++    rc = libxl__get_qdisk_backend_dm_envs(gc, domid, dmss->backend_domid,
++                                          dm_envs);
++    if (rc) goto out;
++
+     libxl__set_qemu_env_for_xsa_180(gc, dm_envs);
++    flexarray_append(dm_envs, NULL);
+     envs = (char **) flexarray_contents(dm_envs);
+ 
+     logfile_w = libxl__create_qemu_logfile(gc, GCSPRINTF("qdisk-%u", domid));
+diff --git a/tools/libs/light/libxl_types.idl b/tools/libs/light/libxl_types.idl
+index 7ed9e7bf76..0644164720 100644
+--- a/tools/libs/light/libxl_types.idl
++++ b/tools/libs/light/libxl_types.idl
+@@ -624,6 +624,8 @@ libxl_domain_build_info = Struct("domain_build_info",[
+     ("extra_pv",         libxl_string_list),
+     # extra parameters pass directly to qemu for HVM guest, NULL terminated
+     ("extra_hvm",        libxl_string_list),
++    # QEMU environment variables, NULL terminated
++    ("qemu_envs",        libxl_string_list),
+     #  parameters for all type of scheduler
+     ("sched_params",     libxl_domain_sched_params),
+ 
+diff --git a/tools/xl/xl_parse.c b/tools/xl/xl_parse.c
+index 97cc865145..4d496eae74 100644
+--- a/tools/xl/xl_parse.c
++++ b/tools/xl/xl_parse.c
+@@ -3127,6 +3127,13 @@ skip_usbdev:
+     xlu_cfg_get_defbool(config, "dm_restrict", &b_info->dm_restrict, 0);
+     xlu_cfg_get_defbool(config, "tpm", &b_info->tpm, 0);
+ 
++    /* Parse QEMU environment variables from config */
++    e = xlu_cfg_get_list_as_string_list(config, "qemu_envs", &b_info->qemu_envs, 0);
++    if (e && e != ESRCH) {
++        fprintf(stderr, "xl: Unable to parse qemu_envs.\n");
++        exit(-ERROR_FAIL);
++    }
++
+     if (c_info->type == LIBXL_DOMAIN_TYPE_HVM) {
+         if (!xlu_cfg_get_string (config, "vga", &buf, 0)) {
+             if (!strcmp(buf, "stdvga")) {
+-- 
+2.34.1
+

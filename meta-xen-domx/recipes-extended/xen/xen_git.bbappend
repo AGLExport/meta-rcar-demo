@@ -3,6 +3,7 @@ require xen-source.inc
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 SRC_URI:append = " \
     file://config.cfg \
+    file://0001-Add-qemu_envs-guest-config-for-custom-environment-va.patch \
 "
 
 SRC_URI:append = " ${@bb.utils.contains('XEN_REV', '2011e6c6fd35f564444983331296f5df7d154373', '', ' \
