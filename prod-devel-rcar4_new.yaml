@@ -29,9 +29,9 @@ variables:
   AGL_GUEST_IMAGE_IC: "agl-cluster-demo-flutter-guest"
   XT_DOMAGL_IVI_TAG: ""
   XT_DOMAGL_IC_TAG: ""
-  XT_AUTOSTART_DOMA: "disable"
+  XT_AUTOSTART_DOMA: "enable"
   XT_AUTOSTART_DOMU: "disable"
-  XT_AUTOSTART_DOMAGL_IVI: "enable"
+  XT_AUTOSTART_DOMAGL_IVI: "disable"
   XT_AUTOSTART_DOMAGL_IC: "enable"
 
 common_data:
