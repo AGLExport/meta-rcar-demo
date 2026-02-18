@@ -41,3 +41,4 @@ install_udev_rules() {
     install -m 0755 ${BBAPPEND_DIR}/files/99-bind-input-devices.rules ${IMAGE_ROOTFS}/etc/udev/rules.d/
 }
 
+IMAGE_INSTALL:remove = "bsp-info"
