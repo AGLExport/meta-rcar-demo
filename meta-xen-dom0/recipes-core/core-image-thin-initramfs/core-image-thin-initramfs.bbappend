@@ -36,3 +36,4 @@ generate_fit_image() {
 
 IMAGE_POSTPROCESS_COMMAND += " generate_fit_image"
 
+IMAGE_INSTALL:append = " xen-tools-xenstat"
