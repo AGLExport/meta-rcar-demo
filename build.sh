@@ -9,33 +9,67 @@ USE_GRAPHICS_PACKAGE=yes
 ENABLE_VIRTIO=no
 ENABLE_DOMU_VIRTIO=no
 CLEAN_BUILD_TEST=no
+INHERIT_RM_WORK=no
 
 Usage() {
     echo "Usage:"
     echo "    $0 [option]"
     echo "option:"
-    echo "    -a: Using DomA(Default is disable. Virtio is forcely enabled.)"
-    echo "    -c: Clean Build test(Default is disable)"
-    echo "    -u: Using DomU(Default is disable)"
-    echo "    -v: Enable Virtio backend on DomD(Default is disabled)"
-    echo "    -r: Enable rm_work on Yocto build"
-    echo "    -h: Show this usage"
+    echo "    -a, --doma: Using DomA(Default is disable. Virtio is forcely enabled.)"
+    echo "    -c, --clean-build-test: Clean Build test(Default is disable)"
+    echo "    -u, --domu: Using DomU(Default is disable)"
+    echo "    -v, --virtio: Enable Virtio backend on DomD(Default is disabled)"
+    echo "    -r, --rm-work: Enable rm_work on Yocto build"
+    echo "    -h, --help: Show this usage"
 }
 
 # Proc arguments
-OPTIND=1
-while getopts "acghuvr" OPT
-do
-    case $OPT in
+set_option() {
+    case "$1" in
         a) USING_DOMA=yes; ENABLE_VIRTIO=yes ;;
-        c) CLEAN_BUILD_TEST=yes;;
-        u) USING_DOMU=yes;;
-        v) ENABLE_VIRTIO=yes;;
-        r) INHERIT_RM_WORK=yes;;
-        h) Usage; exit;;
-        *) echo -e "\e[31mERROR: Unsupported option\e[m"; Usage; exit;;
+        c) CLEAN_BUILD_TEST=yes ;;
+        u) USING_DOMU=yes ;;
+        v) ENABLE_VIRTIO=yes ;;
+        r) INHERIT_RM_WORK=yes ;;
+        h) Usage; exit 0 ;;
+        *) echo -e "\e[31mERROR: Unsupported option '-$1'\e[m"; Usage; exit 1 ;;
     esac
+}
+
+while [[ $# -gt 0 ]]
+do
+    case "$1" in
+        --doma) set_option a ;;
+        --clean-build-test) set_option c ;;
+        --domu) set_option u ;;
+        --virtio) set_option v ;;
+        --rm-work) set_option r ;;
+        --help) set_option h ;;
+        --) shift; break ;;
+        -[!-]?*)
+            short_opts="${1#-}"
+            for ((i=0; i<${#short_opts}; i++)); do
+                set_option "${short_opts:i:1}"
+            done
+            ;;
+        -?)
+            set_option "${1#-}"
+            ;;
+        *)
+            echo -e "\e[31mERROR: Unsupported argument '$1'\e[m"
+            Usage
+            exit 1
+            ;;
+    esac
+    shift
 done
+
+if [[ $# -gt 0 ]]; then
+    echo -e "\e[31mERROR: Unexpected positional arguments: $*\e[m"
+    Usage
+    exit 1
+fi
+
 if [[ "${USING_DOMU}" == "yes" ]] && [[ "${ENABLE_VIRTIO}" == "yes" ]]; then
     ENABLE_DOMU_VIRTIO=yes
 fi
