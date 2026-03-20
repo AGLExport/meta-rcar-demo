@@ -9,6 +9,23 @@ Demo correction for R-Car
 env default -a && env delete bootargs && load mmc 0:1 ${loadaddr} fitImage && bootm ${loadaddr}
 ```
 
+# Limitation
+
+## `ENABLE_DOMU_VIRTIO=no`の場合にビルドがエラーする
+
+`ENABLE_DOMU_VIRTIO=no`の場合には、`build_target` には domuの`build_target`には
+core-image-minimalが指定されるが、
+
+```
+               build_target: core-image-minimal
+```
+
+`target_images` でwestonのイメージが指定されているので、moulinがエラーする。
+```
+        - "tmp/deploy/images/%{DOMU_MACHINE}/core-image-weston-%{DOMU_MACHINE}.rootfs.ext4"
+```
+
+
 # Tips
 
 ## タッチパネルが動作しない
