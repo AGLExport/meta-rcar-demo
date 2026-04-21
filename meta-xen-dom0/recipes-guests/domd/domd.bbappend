@@ -1,6 +1,6 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
-RDEPENDS:append:sparrow-hawk = " dtc"
+RDEPENDS:${PN}:append:sparrow-hawk = " dtc"
 
 SRC_URI:append = "\
     file://domd-set-root \

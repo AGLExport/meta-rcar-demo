@@ -9,35 +9,91 @@ USE_GRAPHICS_PACKAGE=yes
 ENABLE_VIRTIO=no
 ENABLE_DOMU_VIRTIO=no
 CLEAN_BUILD_TEST=no
+INHERIT_RM_WORK=no
+ENABLE_DOMU_AGL_IVI=undefined
+ENABLE_DOMU_AGL_IC=undefined
+ENABLE_ZEPHYR=no
 
 Usage() {
     echo "Usage:"
     echo "    $0 [option]"
     echo "option:"
-    echo "    -a: Using DomA(Default is disable. Virtio is forcely enabled.)"
-    echo "    -c: Clean Build test(Default is disable)"
-    echo "    -u: Using DomU(Default is disable)"
-    echo "    -v: Enable Virtio backend on DomD(Default is disabled)"
-    echo "    -r: Enable rm_work on Yocto build"
-    echo "    -h: Show this usage"
+    echo "    -a, --doma: Using DomA(Default is disable. Virtio is forcely enabled.)"
+    echo "    -c, --clean-build-test: Clean Build test(Default is disable)"
+    echo "    -u, --domu: Using DomU(Default is disable)"
+    echo "    -v, --virtio: Enable Virtio backend on DomD(Default is disabled)"
+    echo "    -r, --rm-work: Enable rm_work on Yocto build"
+    echo "    -z, --zephyr, --enable-zephyr: Build Zephyr images"
+    echo "        --enable-domu-agl-ivi: Enable DomU AGL-IVI guest"
+    echo "        --disable-domu-agl-ivi: Disable DomU AGL-IVI guest"
+    echo "        --enable-domu-agl-ic: Enable DomU AGL-Cluster guest"
+    echo "        --disable-domu-agl-ic: Disable DomU AGL-Cluster guest"
+    echo "    -h, --help: Show this usage"
 }
 
 # Proc arguments
-OPTIND=1
-while getopts "acghuvr" OPT
-do
-    case $OPT in
+set_option() {
+    case "$1" in
         a) USING_DOMA=yes; ENABLE_VIRTIO=yes ;;
-        c) CLEAN_BUILD_TEST=yes;;
-        u) USING_DOMU=yes;;
-        v) ENABLE_VIRTIO=yes;;
-        r) INHERIT_RM_WORK=yes;;
-        h) Usage; exit;;
-        *) echo -e "\e[31mERROR: Unsupported option\e[m"; Usage; exit;;
+        c) CLEAN_BUILD_TEST=yes ;;
+        u) USING_DOMU=yes ;;
+        v) ENABLE_VIRTIO=yes ;;
+        r) INHERIT_RM_WORK=yes ;;
+        z) ENABLE_ZEPHYR=yes ;;
+        h) Usage; exit 0 ;;
+        *) echo -e "\e[31mERROR: Unsupported option '-$1'\e[m"; Usage; exit 1 ;;
     esac
+}
+
+while [[ $# -gt 0 ]]
+do
+    case "$1" in
+        --doma) set_option a ;;
+        --clean-build-test) set_option c ;;
+        --domu) set_option u ;;
+        --virtio) set_option v ;;
+        --rm-work) set_option r ;;
+        --zephyr|--enable-zephyr) set_option z ;;
+        --enable-domu-agl-ivi) ENABLE_DOMU_AGL_IVI=yes ;;
+        --disable-domu-agl-ivi) ENABLE_DOMU_AGL_IVI=no ;;
+        --enable-domu-agl-ic) ENABLE_DOMU_AGL_IC=yes ;;
+        --disable-domu-agl-ic) ENABLE_DOMU_AGL_IC=no ;;
+        --help) set_option h ;;
+        --) shift; break ;;
+        -[!-]?*)
+            short_opts="${1#-}"
+            for ((i=0; i<${#short_opts}; i++)); do
+                set_option "${short_opts:i:1}"
+            done
+            ;;
+        -?)
+            set_option "${1#-}"
+            ;;
+        *)
+            echo -e "\e[31mERROR: Unsupported argument '$1'\e[m"
+            Usage
+            exit 1
+            ;;
+    esac
+    shift
 done
+
+if [[ $# -gt 0 ]]; then
+    echo -e "\e[31mERROR: Unexpected positional arguments: $*\e[m"
+    Usage
+    exit 1
+fi
+
 if [[ "${USING_DOMU}" == "yes" ]] && [[ "${ENABLE_VIRTIO}" == "yes" ]]; then
     ENABLE_DOMU_VIRTIO=yes
+fi
+
+if [[ "${ENABLE_DOMU_AGL_IVI}" == "undefined" ]]; then
+    ENABLE_DOMU_AGL_IVI=${USING_DOMU}
+fi
+
+if [[ "${ENABLE_DOMU_AGL_IC}" == "undefined" ]]; then
+    ENABLE_DOMU_AGL_IC=${USING_DOMU}
 fi
 
 cd ${WORK_DIR}
@@ -87,8 +143,10 @@ moulin prod-devel-rcar4_new.yaml \
     --USE_GRAPHICS_PACKAGE ${USE_GRAPHICS_PACKAGE} \
     --ENABLE_VIRTIO ${ENABLE_VIRTIO} \
     --ADD_META_TEST yes \
-    --ENABLE_DOMU_AGL_IVI yes \
-    --ENABLE_DOMU_AGL_IC yes \
+    --ENABLE_DOMU_AGL_IVI ${ENABLE_DOMU_AGL_IVI} \
+    --ENABLE_DOMU_AGL_IC ${ENABLE_DOMU_AGL_IC} \
+    --ENABLE_ZEPHYR ${ENABLE_ZEPHYR} \
+
 
 if [[ "${INHERIT_RM_WORK}" == "yes" ]]; then
     echo "apply rm_work"
